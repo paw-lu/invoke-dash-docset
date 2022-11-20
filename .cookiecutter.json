@@ -1,0 +1,14 @@
+{
+  "_output_dir": "/Users/pawlu/Documents/personal",
+  "_template": "https://github.com/paw-lu/cookiecutter-dash-docset",
+  "documentation_url": "https://www.pyinvoke.org/",
+  "github_username": "paw-lu",
+  "installable_name": "invoke",
+  "library_name": "invoke",
+  "library_owner": "pyinvoke",
+  "library_repository_name": "invoke",
+  "library_version": "1.7.3",
+  "project_name": "invoke-dash-docset",
+  "python_version": "3.10",
+  "your_name": "Paulo S. Costa"
+}
