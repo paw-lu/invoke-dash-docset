@@ -39,24 +39,30 @@ def clone(session: Session) -> None:
     session.run("gh", "repo", "clone", repository_address, external=True)
 
     with session.chdir(LIBRARY_REPOSITORY):
-        latest_release_tag_name = session.run(
+        tags_api_output = session.run(
             "gh",
             "api",
             "--header=Accept: application/vnd.github+json",
-            f"/repos/{repository_address}/releases/latest",
-            "--jq=.tag_name",
+            f"/repos/{repository_address}/tags",
+            "--jq=.[].name",
             external=True,
             silent=True,
         )
 
-        if isinstance(latest_release_tag_name, str):
-            stripped_tag_name = latest_release_tag_name.rstrip()
+        if isinstance(tags_api_output, str):
+            tag_names = tags_api_output.split()
+            numeric_tag_names = [
+                tag_name
+                for tag_name in tag_names
+                if tag_name.replace(".", "").isnumeric()
+            ]
+            latest_tag_name = max(numeric_tag_names)
             session.run(
                 "git",
                 "checkout",
-                f"tags/{stripped_tag_name}",
+                f"tags/{latest_tag_name}",
                 "-b",
-                stripped_tag_name,
+                latest_tag_name,
                 external=True,
             )
 
@@ -67,49 +73,12 @@ def clone(session: Session) -> None:
 @nox.session(python=PYTHON, tags=["build"])
 def docs(session: Session) -> None:
     """Build invoke's docs."""
-    # Remove the NotImplemented error once the correct doc build steps
-    # have been added
-    raise NotImplementedError(
-        "Replace starter code below with correct docs build steps."
-    )
-    # Instructions are usually found in a file named CONTRIBUTING.md,
-    # or by copying the steps in the workflows found in
-    # .github/workflows/
-    # Check if it works by running nox --tags=build in your terminal
-    # This is an example doc step process that works with most libraries
-    # It may or may not work with the library you are targeting
     with session.chdir(LIBRARY_REPOSITORY):
-        session.install(".")
-
-    with session.chdir(pathlib.Path(LIBRARY_REPOSITORY) / "docs"):
-        session.install("--requirement=requirements.txt")
-        session.run("make", "docs", external=True)
-
-
-@nox.session(python=False, tags=["build"])
-def icon(session: Session) -> None:
-    """Create dash icon."""
-    for size, file_name in (("16x16", "icon.png"), ("32x32", "icon@2x.png")):
-        # Using convert instead of magick since only the former is
-        # available by default right now in ubuntu-latest
-        # Remove the NotImplementedError once the correct icon path has
-        # been added
-        raise NotImplementedError("Specify the correct path to the icon")
-        session.run(
-            "convert",
-            # Specify the correct path in the line below
-            "invoke/path/to/icon.png",
-            "-resize",
-            size,
-            "-background",
-            "none",
-            "-gravity",
-            "center",
-            "-extent",
-            size,
-            file_name,
-            external=True,
-        )
+        # jinja2 3.1.0 deprecates contextfunction
+        contraint_arg = "--constraint=../.github/workflows/constraints.txt"
+        session.install(".", contraint_arg)
+        session.install("--requirement=dev-requirements.txt", contraint_arg)
+        session.run("invoke", "docs.build")
 
 
 def _get_docset_path() -> Path:
@@ -123,27 +92,13 @@ def _get_docset_path() -> Path:
 def dash(session: Session) -> None:
     """Create dash docset."""
     session.install("doc2dash", CONSTRAINTS_ARG)
-    # Remove the NotImplementedError once the correct path to the build
-    # documentation has been added
-    raise NotImplementedError("Specity the correct path to the build documentation")
     session.run(
         "doc2dash",
         "--index-page=index.html",
-        "--icon=icon.png",
         "--online-redirect-url=https://www.pyinvoke.org/",
-        # Replace the path below with the correct path to the
-        # documentation
-        # For python libraries, most of the time the below will work as
-        # is
-        # You may run `nox --sessions clone docs` to observe where the
-        # build docs end up
-        f"{LIBRARY_REPOSITORY}/doc/_build/html",
+        f"{LIBRARY_REPOSITORY}/sites/docs/_build",
         *session.posargs,
     )
-    # As of 3.0.0, doc2dash does not support 2x icons
-    # See https://github.com/hynek/doc2dash/issues/130
-    docset_path = _get_docset_path()
-    shutil.copy("icon@2x.png", os.fsdecode(docset_path))
 
 
 @functools.lru_cache
