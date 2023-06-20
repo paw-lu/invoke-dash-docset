@@ -74,10 +74,8 @@ def clone(session: Session) -> None:
 def docs(session: Session) -> None:
     """Build invoke's docs."""
     with session.chdir(LIBRARY_REPOSITORY):
-        # jinja2 3.1.0 deprecates contextfunction
-        contraint_arg = "--constraint=../.github/workflows/constraints.txt"
-        session.install(".", contraint_arg)
-        session.install("--requirement=dev-requirements.txt", contraint_arg)
+        session.install(".")
+        session.install("--requirement=dev-requirements.txt")
         session.run("invoke", "docs.build")
 
 
